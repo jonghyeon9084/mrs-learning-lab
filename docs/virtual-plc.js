@@ -1,3 +1,4 @@
+import {motionBodies} from './motion.js';
 // A deliberately bounded interpreter for educational ST/SCL sources.
 // It is NOT a Siemens or Beckhoff compiler/runtime. All time is virtual.
 const copy = value => structuredClone(value);
@@ -153,6 +154,7 @@ export class VirtualPLC{
 }
 
 export const plcSamples=[
+{id:'motion',title:'07 · 코드로 로봇 움직이기',guide:'소스를 적용한 뒤 Start를 켜고 자동 실행하세요. Speed(m/s), TurnRate(rad/s), DrivePermit 출력이 아래 로봇을 움직입니다. 장애물을 놓거나 잘못된 코드를 불러와 결과를 비교하세요. 모두 교육용 수치입니다.',inputs:'Start : BOOL;\nQrValid : BOOL := TRUE;\nObstacle : BOOL;\nNearDock : BOOL;\nAtDock : BOOL;',outputs:'DrivePermit : BOOL;\nSpeed : REAL;\nTurnRate : REAL;',locals:'',body:motionBodies.normal},
 {id:'variable',title:'01 · 변수에 값 넣기',guide:'먼저 적용을 누르고 1스캔씩 실행하세요. Count가 1씩 늘어납니다. 아래 1을 2로 바꾸고 다시 적용해 비교하세요.',inputs:'',outputs:'Count : INT := 0;',locals:'',body:'Count := Count + 1;'},
 {id:'condition',title:'02 · 입력과 IF',guide:'Start를 켜고 실행하세요. Obstacle도 켜면 어떤 결과가 나올지 먼저 예상하세요.',inputs:'Start : BOOL;\nObstacle : BOOL;',outputs:'DrivePermit : BOOL;\nSpeed : REAL;',locals:'',body:'IF Start AND NOT Obstacle THEN\n    DrivePermit := TRUE;\n    Speed := 0.2;\nELSE\n    DrivePermit := FALSE;\n    Speed := 0.0;\nEND_IF;'},
 {id:'timer',title:'03 · TON 타이머',guide:'QrValid를 켜고 100ms씩 실행하세요. 첫 TRUE 호출은 ET=0, 이후 100/200/300/400/500ms에서 Q가 바뀝니다. QrValid를 끄면 초기화됩니다.',inputs:'QrValid : BOOL;',outputs:'Stable : BOOL;\nElapsed : TIME;',locals:'QrStable : TON;',body:'QrStable(IN := QrValid, PT := T#500ms);\nStable := QrStable.Q;\nElapsed := QrStable.ET;'},
@@ -160,6 +162,7 @@ export const plcSamples=[
 {id:'array',title:'05 · 배열과 FOR',guide:'배열의 세 값을 더합니다. 한 스캔에 FOR가 모두 실행됩니다. Values[2] 값을 바꾸고 Total을 확인하세요.',inputs:'',outputs:'Total : INT;',locals:'Values : ARRAY[1..3] OF INT;\ni : INT;',body:'Values[1] := 10;\nValues[2] := 20;\nValues[3] := 30;\nTotal := 0;\nFOR i := 1 TO 3 DO\n    Total := Total + Values[i];\nEND_FOR;'},
 {id:'docking',title:'06 · 도킹 상태 + 시간 초과',guide:'Start를 켜면 State=1. QrValid를 켜면 State=2. DockConfirmed를 켜면 State=3(완료). State=2에서 완료 없이 가상 2초가 지나면 State=99. Fault를 유지하며, 전체 재시작은 다시 적용으로 수행합니다. 교육용 미니 시퀀스입니다.',inputs:'Start : BOOL;\nQrValid : BOOL;\nDockConfirmed : BOOL;',outputs:'State : INT;\nDrivePermit : BOOL;\nFault : BOOL;',locals:'DockTimer : TON;',body:'DockTimer(IN := State = 2, PT := T#2s);\nCASE State OF\n    0: IF Start THEN State := 1; END_IF;\n    1: IF QrValid THEN State := 2; END_IF;\n    2:\n        IF NOT QrValid OR DockTimer.Q THEN\n            State := 99;\n        ELSIF DockConfirmed THEN\n            State := 3;\n        END_IF;\n    3: (* 완료 유지 *)\n    99: (* Fault 유지 *)\nELSE\n    State := 99;\nEND_CASE;\nDrivePermit := (State = 2) AND QrValid;\nFault := State = 99;'}
 ];
+plcSamples.push(plcSamples.shift());
 export function sampleSource(sample,dialect='st'){
   const vars=[sample.inputs,sample.outputs,sample.locals].join('\n').match(/\b\w+(?=\s*:)/g)||[];
   let body=sample.body,locals=sample.locals;

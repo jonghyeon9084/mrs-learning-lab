@@ -22,7 +22,8 @@ Python/C++/ROS2 경험은 필수가 아닙니다. 관련 비교 설명은 선택
 | --- | --- |
 | 13개 수업 | 완전 기초 3개, 제어·문법 5개, 센서·실무 5개 |
 | 코드 연습장 | 조건, 속도 선택, 에지, 상태, 출력 잔류 버그 5개 채점 과제 |
-| 가상 PLC | ST/SCL 전체 소스 6개 예제, 가상 스캔, 변수·타이머 모니터 |
+| 가상 PLC | ST/SCL 전체 소스 7개 예제, 가상 스캔, 변수·타이머 모니터 |
+| 코드 연동 이동 | 직접 쓴 Speed/TurnRate/DrivePermit으로 이동·회전. 충돌·목표 지나침·역방향·회전 오류 시각화 |
 | 로봇 시뮬레이터 | 주행·도킹·오류·복귀의 교육용 상태 머신 |
 | 복습 | 해설이 있는 16개 문제 |
 | 현장 노트 | 미확인 장비/환경 체크리스트, 로컬 메모, 진도 내보내기/가져오기 |
@@ -46,7 +47,7 @@ Python/C++/ROS2 경험은 필수가 아닙니다. 관련 비교 설명은 선택
 런타임 의존성 설치는 필요하지 않습니다. Node.js로 검증하고 Python으로 로컬 정적 서버를 열 수 있습니다.
 
 ```powershell
-node --test tests/engine.test.mjs tests/virtual-plc.test.mjs
+node --test tests/*.test.mjs
 python -m http.server 4173 --bind 127.0.0.1 --directory docs
 ```
 
