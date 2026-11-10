@@ -1,0 +1,36 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#214f43">
+  <meta name="description" content="ST 문법부터 센서, PLC 스캔, 모바일로봇 도킹까지. 직접 실험하며 배우는 나의 MRS 학습 공간.">
+  <title>MRS Lab · 학습 공간</title>
+  <link rel="icon" href="./favicon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="./style.css">
+</head>
+<body>
+<a class="skip" href="#main">본문으로 이동</a>
+<aside class="sidebar">
+  <a class="brand" href="#home"><span class="brand-icon">M<span>↗</span></span><span>MRS Lab<small>MY ENGINEERING NOTEBOOK</small></span></a>
+  <div class="sidebar-label">LEARN BY DOING</div>
+  <nav aria-label="주 메뉴">
+    <a href="#home" data-nav="home"><span>⌂</span> 학습 대시보드</a>
+    <a href="#course" data-nav="course"><span>▤</span> 개념 & 문법 수업 <b>13</b></a>
+    <a href="#practice" data-nav="practice"><span>⌘</span> ST 코드 연습장</a>
+    <a href="#virtual" data-nav="virtual"><span>▣</span> 가상 PLC 실습실</a>
+    <a href="#robot" data-nav="robot"><span>◇</span> 로봇 시뮬레이터</a>
+    <a href="#review" data-nav="review"><span>✓</span> 복습 문제</a>
+    <a href="#field" data-nav="field"><span>⊞</span> 현장 체크리스트</a>
+  </nav>
+  <div class="sidebar-bottom"><div class="note-mark">LEARNING RECORD</div><p>나의 학습 진도</p><div class="mini-progress"><i id="side-progress"></i></div><small id="side-progress-label">완료한 수업 · 0 / 13</small><a class="source-link" href="https://github.com/jonghyeon9084/mrs-learning-lab" target="_blank" rel="noopener noreferrer">GitHub에서 코드 보기 ↗</a></div>
+</aside>
+<div class="workspace">
+  <header class="topbar"><div class="crumb">나의 학습 공간 <span>/</span> <strong id="page-title">대시보드</strong></div><div class="top-right"><span class="status-dot"></span> 브라우저에 진도 저장 <span class="avatar">ME</span></div></header>
+  <main id="main" tabindex="-1"></main>
+  <footer><span>MRS Lab · 한 번에 한 스캔씩.</span><span>교육용 가상 환경 · 실제 제어기와 연결되지 않습니다.</span></footer>
+</div>
+<div id="toast" role="status" aria-live="polite"></div>
+<script type="module" src="./app.js"></script>
+</body>
+</html>

@@ -1,0 +1,3 @@
+Monaco Editor 0.52.2
+Source: https://registry.npmjs.org/monaco-editor/0.52.2
+Integrity: sha512-GEQWEZmfkOGLdd3XK8ryrfWz3AIP8YymVXiPHEdewrUq7mh0qrKrfHLNCXcbB6sTnMLnOZ3ztSiKcciFUkIJwQ==
