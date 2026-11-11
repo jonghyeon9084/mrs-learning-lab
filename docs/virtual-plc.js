@@ -1,3 +1,4 @@
+import {flattenValues,changedValues,expressionText,traceExplanation} from './plc-trace.js';
 import {motionBodies} from './motion.js';
 import {twinSamples} from './twincat-examples.js';
 import {amrSample} from './amr-case.js';
@@ -52,10 +53,11 @@ export function compilePLC(source){
   while(offset<body.length){if(/\s/.test(body[offset])){offset++;continue;}
     const m=/^(?:(?:T|TIME)#\d+(?:ms|s|m|h)\b|#?[A-Za-z_]\w*|\d+(?:\.\d+)?|:=|=>|<>|<=|>=|[+*/=<>:;(),.\[\]-])/i.exec(body.slice(offset));
     if(!m)throw new Error(`${body.slice(0,offset).split('\n').length}행: 지원하지 않는 문자 '${body[offset]}'`);
-    tokens.push({text:m[0].toUpperCase().replace(/^#/,''),line:body.slice(0,offset).split('\n').length});offset+=m[0].length;if(tokens.length>7000)throw new Error('토큰 수 제한을 초과했습니다.');
+    tokens.push({text:m[0].toUpperCase().replace(/^#/,''),line:body.slice(0,offset).split('\n').length,column:offset-body.lastIndexOf('\n',offset-1),endColumn:offset-body.lastIndexOf('\n',offset-1)+m[0].length});offset+=m[0].length;if(tokens.length>7000)throw new Error('토큰 수 제한을 초과했습니다.');
   }
   tokens.push({text:'EOF',line:body.split('\n').length});let pos=0,depth=0;
   const peek=()=>tokens[pos]?.text??'EOF',take=()=>tokens[pos++]?.text??'EOF',fail=s=>{throw new Error(`${tokens[pos]?.line??1}행: ${s}`);},expect=s=>{if(peek()!==s)fail(`'${s}'가 필요합니다. 현재 '${peek()}'`);take();};
+  const location=(start,end=pos)=>({line:tokens[start].line,column:tokens[start].column,endLine:tokens[Math.max(start,end-1)].line,endColumn:tokens[Math.max(start,end-1)].endColumn});
   const precedence={OR:1,XOR:2,AND:3,'=':4,'<>':4,'<':5,'>':5,'<=':5,'>=':5,'+':6,'-':6,'*':7,'/':7,MOD:7};
   function ref(first=take()){
     if(!schema[first])fail(`선언되지 않은 변수: ${first}`);
@@ -81,22 +83,23 @@ export function compilePLC(source){
     while(peek()!=='EOF'&&!stop.includes(peek())){
       if(labels&&/^\d+$/.test(peek())&&tokens[pos+1]?.text===':')break;
       if(peek()===';'){take();continue;}
+      const startPos=pos;
       if(peek()==='IF'){
-        take();const branches=[];let condition=expr();expect('THEN');branches.push([condition,block(['ELSIF','ELSE','END_IF'])]);
-        while(peek()==='ELSIF'){take();condition=expr();expect('THEN');branches.push([condition,block(['ELSIF','ELSE','END_IF'])]);}
+        take();const branches=[];let condition=expr();expect('THEN');let at=location(startPos);branches.push([condition,block(['ELSIF','ELSE','END_IF']),at]);
+        while(peek()==='ELSIF'){const branchPos=pos;take();condition=expr();expect('THEN');at=location(branchPos);branches.push([condition,block(['ELSIF','ELSE','END_IF']),at]);}
         let other=[];if(peek()==='ELSE'){take();other=block(['END_IF']);}expect('END_IF');expect(';');out.push({op:'if',branches,other});
       }else if(peek()==='CASE'){
-        take();const selector=expr();expect('OF');const branches=[],used=new Set();
+        take();const selector=expr();expect('OF');const at=location(startPos);const branches=[],used=new Set();
         while(!['ELSE','END_CASE','EOF'].includes(peek())){if(!/^\d+$/.test(peek()))fail('CASE는 단일 0 이상 정수 레이블을 지원합니다.');const label=Number(take());if(used.has(label))fail('CASE 레이블 중복');used.add(label);expect(':');branches.push([label,block(['ELSE','END_CASE'],true)]);}
-        let other=[];if(peek()==='ELSE'){take();other=block(['END_CASE']);}expect('END_CASE');expect(';');out.push({op:'case',selector,branches,other});
+        let other=[];if(peek()==='ELSE'){take();other=block(['END_CASE']);}expect('END_CASE');expect(';');out.push({op:'case',selector,branches,other,at});
       }else if(peek()==='FOR'){
-        take();const target=ref();if(target.index||target.field||!['INT','DINT'].includes(schema[target.name].type))fail('FOR 제어 변수는 단일 INT/DINT여야 합니다.');expect(':=');const start=expr();expect('TO');const end=expr();let step={op:'lit',value:1};if(peek()==='BY'){take();step=expr();}expect('DO');const body=block(['END_FOR']);expect('END_FOR');expect(';');out.push({op:'for',target,start,end,step,body});
+        take();const target=ref();if(target.index||target.field||!['INT','DINT'].includes(schema[target.name].type))fail('FOR 제어 변수는 단일 INT/DINT여야 합니다.');expect(':=');const start=expr();expect('TO');const end=expr();let step={op:'lit',value:1};if(peek()==='BY'){take();step=expr();}expect('DO');const at=location(startPos);const body=block(['END_FOR']);expect('END_FOR');expect(';');out.push({op:'for',target,start,end,step,body,at});
       }else{
         const target=ref();
         if(peek()==='('){take();const args={},outputs={};while(peek()!==')'){
           const name=take(),operator=take();if(Object.hasOwn(args,name)||Object.hasOwn(outputs,name))fail('중복 인자');if(operator===':=')args[name]=expr();else if(operator==='=>')outputs[name]=ref();else fail('인자에는 := 또는 =>가 필요합니다.');if(peek()!==',')break;take();
-        }expect(')');expect(';');out.push({op:'call',target,args,outputs});}
-        else{expect(':=');const value=expr();expect(';');out.push({op:'set',target,value});}
+        }expect(')');expect(';');out.push({op:'call',target,args,outputs,at:location(startPos)});}
+        else{expect(':=');const value=expr();expect(';');out.push({op:'set',target,value,at:location(startPos)});}
       }
     }depth--;return out;
   }
@@ -106,10 +109,14 @@ export function compilePLC(source){
 export class VirtualPLC{
   constructor(program){this.program=program;this.values=Object.fromEntries(Object.entries(program.schema).map(([k,s])=>[k,copy(s.initial)]));this.time=0;this.scan=0;this.history=[];}
   write(name,value){const key=name.toUpperCase(),s=this.program.schema[key];if(!s)throw new Error(`변수 없음: ${name}`);if(s.section!=='VAR_INPUT')throw new Error('입력 변수만 입력 패널에서 변경할 수 있습니다.');checkType(value,s.type);this.values[key]=value;}
-  step(dt=100){
+  step(dt=100){const iterator=this.scanSteps(dt);let result;do{result=iterator.next();}while(!result.done);return result.value;}
+  *scanSteps(dt=100){
     if(!Number.isInteger(dt)||dt<1||dt>10000)throw new Error('스캔 시간은 1~10000ms의 정수여야 합니다.');
     const env=copy(this.values),schema=this.program.schema;const now=this.time;let budget=10000;const usedTimers=new Set();
+    const trace=[],initial=flattenValues(env,schema);let previous=initial,reads={},traceCount=0,activeLine=0;
+    const event=(n,kind,detail={})=>{const current=flattenValues(env,schema);const entry={...n.at,kind,detail,reads:{...reads},changes:changedValues(previous,current)};entry.text=this.program.source.split('\n').slice((entry.line||1)-1,entry.endLine||entry.line||1).join('\n');entry.explanation=traceExplanation(entry);previous=current;reads={};traceCount++;if(trace.length<500)trace.push(entry);return entry;};
     for(const [k,s] of Object.entries(schema))if(s.section==='VAR_TEMP')env[k]=copy(s.initial);
+    if(Object.keys(changedValues(initial,flattenValues(env,schema))).length)yield event({at:{line:0,endLine:0}},'temp');
     const bool=v=>{if(typeof v!=='boolean')throw new Error('조건은 BOOL이어야 합니다.');return v;},num=v=>{if(typeof v!=='number'||!Number.isFinite(v))throw new Error('유한한 숫자가 필요합니다.');return v;};
     const int=v=>{num(v);if(!Number.isInteger(v))throw new Error('정수가 필요합니다.');return v;};
     function resolve(r){const s=schema[r.name];let owner=env,key=r.name,type=s.type;
@@ -118,7 +125,7 @@ export class VirtualPLC{
       if(r.field){const object=owner[key];if(!object||typeof object!=='object'||!Object.hasOwn(object,r.field)||!['IN','PT','Q','ET','CLK'].includes(r.field))throw new Error(`지원하지 않는 멤버: ${r.field}`);owner=object;key=r.field;type=['Q','IN','CLK'].includes(r.field)?'BOOL':'TIME';}
       return {owner,key,type,s};
     }
-    function read(r){const {owner,key}=resolve(r);return owner[key];}
+    function read(r){const {owner,key}=resolve(r);const name=expressionText(r,schema);const value=owner[key];if(value&&typeof value==='object'&&!Array.isArray(value)){for(const field of ['IN','PT','ET','Q','CLK'])if(Object.hasOwn(value,field))reads[name+'.'+field]=value[field];}else reads[name]=copy(value);return value;}
     function assign(r,value){const {owner,key,type,s}=resolve(r);if(s.section==='VAR_INPUT')throw new Error(`입력 ${s.name}은 코드에서 대입할 수 없도록 제한했습니다.`);if(typeof owner[key]==='object')throw new Error('배열/FB 전체 대입은 지원하지 않습니다.');if(r.field)throw new Error('FB 멤버 직접 쓰기는 지원하지 않습니다. 호출 인자를 사용하세요.');checkType(value,type);owner[key]=value;}
     function evaluate(n){
       if(n.op==='lit')return n.value;if(n.op==='ref')return read(n);
@@ -155,17 +162,20 @@ export class VirtualPLC{
       }else{if(!Object.hasOwn(args,'CLK'))throw new Error('에지 FB에는 CLK가 필요합니다.');fb.CLK=bool(args.CLK);fb.Q=fb.kind==='R_TRIG'?fb.CLK&&!fb.previous:!fb.CLK&&fb.previous;fb.previous=fb.CLK;}
       for(const [k,r] of Object.entries(n.outputs)){if(!['Q','ET'].includes(k)||!Object.hasOwn(fb,k))throw new Error('지원하지 않는 출력 인자');assign(r,fb[k]);}
     }
-    function run(nodes){for(const n of nodes){if(--budget<0)throw new Error('한 스캔 연산 제한 초과: 반복문 범위를 확인하세요.');
-      if(n.op==='set')assign(n.target,evaluate(n.value));
-      else if(n.op==='call')call(n);
-      else if(n.op==='if'){let found=false;for(const [cond,body] of n.branches)if(bool(evaluate(cond))){run(body);found=true;break;}if(!found)run(n.other);}
-      else if(n.op==='case'){const v=int(evaluate(n.selector));run(n.branches.find(([label])=>label===v)?.[1]??n.other);}
+    function* run(nodes){for(const n of nodes){activeLine=n.at?.line||n.branches?.[0]?.[2]?.line||1;if(--budget<0)throw new Error('한 스캔 연산 제한 초과: 반복문 범위를 확인하세요.');
+      if(n.op==='set'){assign(n.target,evaluate(n.value));yield event(n,'set',{target:expressionText(n.target,schema),expression:expressionText(n.value,schema)});}
+      else if(n.op==='call'){call(n);yield event(n,'call',{target:schema[n.target.name].name,type:env[n.target.name].kind,args:Object.keys(n.args)});}
+      else if(n.op==='if'){let found=false;for(const [cond,body,at] of n.branches){activeLine=at.line;const result=bool(evaluate(cond));yield event({at},'if',{expression:expressionText(cond,schema),result});if(result){yield* run(body);found=true;break;}}if(!found)yield* run(n.other);}
+      else if(n.op==='case'){const v=int(evaluate(n.selector)),branch=n.branches.find(([label])=>label===v);yield event(n,'case',{expression:expressionText(n.selector,schema),value:v,matched:!!branch});yield* run(branch?.[1]??n.other);}
       else if(n.op==='for'){
         const start=int(evaluate(n.start)),end=int(evaluate(n.end)),step=int(evaluate(n.step));if(!step)throw new Error('FOR BY는 0일 수 없습니다.');assign(n.target,start);
-        while(step>0?read(n.target)<=end:read(n.target)>=end){if(--budget<0)throw new Error('반복문 연산 제한 초과');run(n.body);assign(n.target,read(n.target)+step);}
+        yield event(n,'for-init',{target:expressionText(n.target,schema),start,end,step});
+        while(true){activeLine=n.at.line;const value=read(n.target),result=step>0?value<=end:value>=end;yield event(n,'for-test',{value,end,result});if(!result)break;if(--budget<0)throw new Error('반복문 연산 제한 초과');yield* run(n.body);activeLine=n.at.line;assign(n.target,read(n.target)+step);yield event(n,'for-next',{step});}
       }
     }}
-    run(this.program.ast);this.values=env;this.time+=dt;this.scan++;const record={scan:this.scan,time:now,values:copy(env)};this.history.push(record);if(this.history.length>100)this.history.shift();return record;
+    try{yield* run(this.program.ast);}catch(error){error.line=activeLine;error.message=activeLine+'행: '+error.message+' (해당 스캔은 적용되지 않았습니다.)';throw error;}
+    this.values=env;this.time+=dt;this.scan++;const record={scan:this.scan,time:now,values:copy(env),initial,trace,truncated:traceCount>trace.length,eventCount:traceCount};this.lastTrace=record;
+    this.history.push({scan:record.scan,time:now,values:record.values});if(this.history.length>100)this.history.shift();return record;
   }
   watch(){return Object.entries(this.program.schema).map(([key,s])=>({name:s.name,type:s.lower===null?s.type:`ARRAY[${s.lower}..${s.upper}] OF ${s.type}`,section:s.section,value:this.values[key]}));}
 }
