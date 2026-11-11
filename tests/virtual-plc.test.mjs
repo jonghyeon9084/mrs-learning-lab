@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import {VirtualPLC,compilePLC,plcSamples,sampleSource} from '../docs/virtual-plc.js';
 const machine=(id,dialect='st')=>new VirtualPLC(compilePLC(sampleSource(plcSamples.find(s=>s.id===id),dialect)));
 for(const mode of ['st','scl']){
-  for(const s of plcSamples)test(`${mode}: full ${s.id} source parses and executes`,()=>machine(s.id,mode).step());
+  for(const s of plcSamples.filter(s=>mode==='st'||!s.stOnly))test(`${mode}: full ${s.id} source parses and executes`,()=>machine(s.id,mode).step());
   test(`${mode}: variable persists across scans`,()=>{const p=machine('variable',mode);p.step();p.step();assert.equal(p.values.COUNT,2);});
   test(`${mode}: TON starts at ET 0 and reaches 500ms on sixth 100ms sample`,()=>{const p=machine('timer',mode);p.write('QrValid',true);for(let i=0;i<5;i++){p.step();assert.equal(p.values.ELAPSED,i*100);assert.equal(p.values.STABLE,false);}p.step();assert.equal(p.values.STABLE,true);assert.equal(p.values.ELAPSED,500);p.write('QrValid',false);p.step();assert.equal(p.values.ELAPSED,0);assert.equal(p.values.STABLE,false);});
   test(`${mode}: rising edge only once for held input`,()=>{const p=machine('trigger',mode);p.write('Start',true);p.step();assert.equal(p.values.PULSE,true);p.step();assert.equal(p.values.PULSE,false);assert.equal(p.values.COUNT,1);p.write('Start',false);p.step();p.write('Start',true);p.step();assert.equal(p.values.COUNT,2);});

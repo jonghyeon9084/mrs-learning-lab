@@ -1,10 +1,16 @@
+import {amrSources,amrLessons,amrQuizzes} from './amr-learning.js';
 import {foundations,foundationQuizzes} from './foundations.js';
-// All company-specific equipment and architecture are deliberately left unasserted.
+import {twinSources,twinLessons,twinQuizzes,structureBody,scanBody,fieldEvidence} from './twincat-content.js';
+import {readingSources,readingLesson} from './code-reading.js';
+// Field observations are user-reported; unverified roles remain explicitly uncertain.
 // Technical references reviewed 2026-11-10. Examples are original teaching scenarios.
 export const sources = {
- st: ['Beckhoff · Structured Text 문법', 'https://infosys.beckhoff.com/content/1033/tcplccontrol/925248523.html', '공통 구문 참고. 이 문서는 TwinCAT PLC Control 문서이며 TwinCAT 3 프로젝트 검증을 의미하지 않음.'],
+ ...twinSources,
+ ...readingSources,
+ ...amrSources,
+ st: ['Beckhoff · TwinCAT 3 ST 함수/호출', 'https://infosys.beckhoff.com/content/1033/tc3_plc_intro/2529365899.html', 'TwinCAT 3 ST 표현식·FB 호출 예. 프로젝트 컴파일 검증과 구분.'],
  scl: ['Siemens · S7-1200 V20 / SCL', 'https://docs.tia.siemens.cloud/r/simatic_s7_1200_manual_collection_enus_20/programming-concepts/programming-language/scl', 'S7-1200 V20 문서 범위. 실제 회사 버전과 일치 여부 미확인.'],
- scan: ['Siemens · S7-1200 V20 / RUN 스캔 처리', 'https://docs.tia.siemens.cloud/r/simatic_s7_1200_manual_collection_enus_20/plc-concepts/execution-of-the-user-program/processing-the-scan-cycle-in-run-mode', '기본 자동 I/O 갱신 및 인터럽트 설명. 모든 PLC에 같은 순서를 적용하지 않음.'],
+ scan: ['Beckhoff · TwinCAT 3 Program/Task', 'https://infosys.beckhoff.com/content/1033/tc3_plc_intro/2530274187.html', 'Task에서 정의하는 PROGRAM 호출 순서와 상태 유지.'],
  blocks: ['Siemens · S7-1200/1500 Programming Guideline V1.6', 'https://cache.industry.siemens.com/dl/files/040/90885040/att_970576/v1/81318674_Programming_guideline_DOC_v16_en.pdf', 'OB, FC, FB, DB의 구분과 구조화 참고.'],
  elements: ['Beckhoff · TwinCAT 3 기본 PLC 요소', 'https://infosys.beckhoff.com/content/1033/tc3_plc_intro/7647314827.html', 'Program, Function, FB, 구조체, 열거형, GVL 구분.'],
  ton: ['Beckhoff · Tc2_Standard / TON', 'https://infosys.beckhoff.com/content/1033/tcplclib_tc2_standard/74406539.html', 'IN, PT, Q, ET 동작. 브라우저에는 이 라이브러리가 탑재되어 있지 않음.'],
@@ -21,22 +27,22 @@ export const sources = {
 };
 
 export const lessons = [
-{id:1,title:'로봇 제어의 큰 그림',desc:'센서에서 구동까지, 신호가 흐르는 길을 그립니다.',category:'시작하기',minutes:25,days:'DAY 01',refs:['elements','blocks','laser'],body:`
+{id:1,title:'로봇 제어의 큰 그림',desc:'확인된 현장 관찰과 가상의 제어 흐름을 구분합니다.',category:'시작하기',minutes:25,days:'DAY 01',refs:['elements','program','laser'],body:`
 <h2>먼저, 무엇이 무엇을 결정하는가</h2><p>로봇을 하나의 프로그램으로 보지 말고 <strong>측정 → 판단 → 명령 → 결과 확인</strong>으로 나누어 읽어 봅시다. 센서는 관측값을 만들고, 제어 로직은 입력과 현재 상태를 이용해 다음 동작을 결정합니다. 구동 명령을 보냈다는 사실과 실제로 움직였다는 사실은 구분해야 합니다.</p>
-<div class="callout">이 수업의 로봇은 학습용 가상 시스템입니다. 회사의 PLC 모델, 제어 분담, 배선, 센서 역할은 아직 확인되지 않았습니다.</div>
+<div class="callout">이 수업의 로봇은 학습용 가상 시스템입니다. 현재 개발 도구는 TwinCAT 3로 확인되었습니다. PLC/IPC 모델, 제어 분담, 배선과 센서별 역할은 아직 미확인입니다.</div>
 <h2>처음 만나는 용어</h2><table><tr><th>용어</th><th>읽는 관점</th></tr><tr><td>PLC</td><td>입력과 프로그램을 바탕으로 제어 로직을 실행하는 제어기. 어떤 기능을 맡는지는 프로젝트에서 확인합니다.</td></tr><tr><td>HMI</td><td>사람이 상태를 보고 명령을 요청하는 인터페이스. 표시된 버튼 상태가 물리 출력 상태와 같은지 확인이 필요합니다.</td></tr><tr><td>IPC / 주행 제어기</td><td>제어 시스템을 구성할 수 있는 컴퓨터·장치. 비전·주행·통신 기능의 실제 배치는 미확인입니다.</td></tr><tr><td>입력 / 출력</td><td>누구를 기준으로 읽는지 명시합니다. 카메라의 출력은 수신 제어기 관점에서는 입력입니다.</td></tr><tr><td>인터록</td><td>정해진 조건이 만족되어야 동작을 허용하는 논리. 일반 프로그램의 인터록과 인증된 안전 기능은 같지 않습니다.</td></tr></table>
-<h2>이미 Python·ROS2를 알고 있다면 · 선택 읽기</h2><p>ROS2에서 메시지를 받고 상태를 판단한 뒤 명령을 내보냈던 흐름을 떠올리면 됩니다. 다만 PLC의 호출 주기와 I/O 갱신은 구성에 따라 정해지므로, ROS2 콜백과 똑같은 실행 모델이라고 생각하면 안 됩니다. 이 사이트에서는 ‘한 스캔 실행’을 눌러 호출 경계를 직접 구분합니다.</p>
+${fieldEvidence}<h2>Python·ROS2 경험과 연결하기</h2><p>ROS2에서 메시지를 받고 상태를 판단한 뒤 명령을 내보냈던 흐름을 떠올리면 됩니다. 다만 PLC의 호출 주기와 I/O 갱신은 구성에 따라 정해지므로, ROS2 콜백과 똑같은 실행 모델이라고 생각하면 안 됩니다. 이 사이트에서는 ‘한 스캔 실행’을 눌러 호출 경계를 직접 구분합니다.</p>
 <h2>처음 코드 받을 때의 읽기 순서</h2><ol><li>장치 구성과 프로그램 진입점을 찾습니다.</li><li>입력 태그가 어디서 갱신되는지 찾습니다.</li><li>상태 변수와 상태 전이 조건을 찾습니다.</li><li>출력 명령을 쓰는 모든 위치를 찾습니다.</li><li>명령에 대한 실제 피드백과 오류 기록을 찾습니다.</li></ol>
 <h2>현장형 연습</h2><p><strong>“HMI에서 주행 버튼을 눌렀는데 움직이지 않는다.”</strong> 버튼 요청, 운전 모드, 허가 조건, 상태 전이, 출력 명령, 구동기 응답을 각각 확인할 항목으로 적으세요. 어느 한 단계도 확인하지 않은 상태에서 모터 고장이라고 결론 내리지 않습니다.</p><p><strong>완료 기준:</strong> 입력·상태·명령·피드백을 서로 다른 항목으로 설명할 수 있습니다.</p>`},
-{id:2,title:'ST 문법의 첫 문장',desc:'변수, 자료형, 대입, IF와 CASE를 읽고 씁니다.',category:'문법 기초',minutes:40,days:'DAY 02–03',refs:['st','scl','types','operators'],body:`
-<h2>ST와 SCL</h2><p>ST는 Structured Text입니다. Siemens의 SCL은 ST 기반의 텍스트 언어입니다. 공통 문법을 익히되 선언부, 라이브러리 호출, 주소 표기까지 제조사 사이에서 완전히 같다고 가정하지 않습니다.</p>
+{id:2,title:'TwinCAT 3 ST 문법과 제어 구문',desc:'변수, 자료형, 대입, IF와 CASE를 읽고 씁니다.',category:'문법 기초',minutes:40,days:'DAY 02–03',refs:['st','types','operators','pou'],body:`
+<h2>현재 기준: TwinCAT 3 ST</h2><p>Python/C++의 조건과 반복 개념을 ST 표기로 연결합니다. 핵심은 선언부와 구현부, 정해진 자료형, 호출 주기와 상태 유지입니다. GX Works3는 마지막 단계의 전환 대비 자료이며 아직 채택이 확정되지 않았습니다.</p>
 <table><tr><th>의도</th><th>ST</th><th>Python / C++</th></tr><tr><td>대입</td><td><code>Speed := 0.2;</code></td><td><code>speed = 0.2</code></td></tr><tr><td>같음 / 다름</td><td><code>= / &lt;&gt;</code></td><td><code>== / !=</code></td></tr><tr><td>논리 연산</td><td><code>AND OR NOT</code></td><td><code>and or not</code> / <code>&amp;&amp; || !</code></td></tr><tr><td>조건 분기</td><td><code>IF … THEN … ELSIF … ELSE … END_IF;</code></td><td>if / elif / else 또는 if / else if</td></tr><tr><td>참·거짓</td><td><code>TRUE / FALSE</code></td><td>True / False 또는 true / false</td></tr></table>
 <h2>변수는 의미와 단위를 함께</h2><pre><code>(* 교육용 선언 예: TwinCAT 스타일 *)
 VAR
     Start : BOOL := FALSE;
     Count : INT := 0;
     Speed : REAL := 0.0;  (* 이 예제의 단위: m/s *)
-END_VAR</code></pre><p><code>BOOL</code>은 참·거짓, <code>INT</code>는 정수, <code>REAL</code>은 부동소수 값을 나타냅니다. Python 정수와 달리 PLC 정수는 자료형의 범위를 고려해야 합니다. 계산 결과의 범위 초과와 변환 결과는 대상 런타임 문서에서 확인하세요.</p><p>TIA Portal에서는 블록 인터페이스에 Input/Output/Static/Temp 등을 선언합니다. 로컬 변수의 <code>#</code> 표기나 외부 소스 구조는 이 사이트의 공통 예제와 다릅니다. 아래 코드는 실행부 학습 예이며, 실제 PLC 컴파일 검증은 수행하지 않았습니다.</p>
+END_VAR</code></pre><p><code>BOOL</code>은 참·거짓, <code>INT</code>는 정수, <code>REAL</code>은 부동소수 값을 나타냅니다. Python 정수와 달리 PLC 정수는 자료형의 범위를 고려해야 합니다. 계산 결과의 범위 초과와 변환 결과는 대상 런타임 문서에서 확인하세요.</p><p>TwinCAT POU 편집기는 선언부와 구현부가 나뉩니다. 선언은 위쪽에, IF/CASE 실행문은 구현부에 둡니다. 아래는 교육용 실행부이며, 실제 TwinCAT 컴파일은 미실시입니다. 기존 SCL 초안은 비교 자료 모드에서 보존됩니다.</p>
 <h2>매 스캔 결과를 결정하는 IF</h2><pre><code>IF Start AND NOT Obstacle THEN
     DrivePermit := TRUE;
     Speed := 0.2;
@@ -58,29 +64,8 @@ FOR i := 1 TO 3 DO
     Total := Total + Values[i];
 END_FOR;</code></pre><p>이 FOR는 한 번의 호출 안에서 반복됩니다. ‘한 스캔에 한 항목씩’이 아닙니다. 인덱스 범위와 실행 시간도 함께 검토합니다.</p>
 <h2>바로 실습하기</h2><p>ST 연습장에서 ‘주행 허가’를 선택하세요. Start와 Obstacle의 네 조합을 실행한 뒤 결과를 예측값과 비교합니다. ELSE를 지웠을 때 이전 출력이 남는 이유는 다음 수업에서 다룹니다.</p>`},
-{id:3,title:'스캔, 기억, 에지와 타이머',desc:'한 번 실행과 반복 실행의 차이를 이해합니다.',category:'PLC 실행',minutes:40,days:'DAY 04',refs:['scan','edge','ton'],body:`
-<h2>코드를 언제 다시 실행하는가</h2><p>PLC의 주기 프로그램은 반복 실행됩니다. 다만 ‘모든 PLC가 입력→코드→출력의 한 가지 순서’라고 외우면 부정확합니다. Siemens S7-1200 V20의 기본 자동 갱신 설명은 <strong>출력 이미지 반영 → 입력 이미지 갱신 → 사용자 프로그램 실행</strong> 순서이며 인터럽트와 통신 처리도 있습니다. 직접 I/O 접근과 다른 태스크 구성은 별도로 봐야 합니다.</p>
-<div class="callout">브라우저 모델은 입력 스냅샷 → 로직 → 결과 표시로 단순화했습니다. 화면의 한 스캔은 실제 PLC의 I/O 타이밍 재현이 아닙니다.</div>
-<h2>변수를 대입하지 않으면?</h2><pre><code>IF Start THEN
-    DrivePermit := TRUE;
-END_IF;</code></pre><p>DrivePermit이 호출 사이에 값을 유지하는 저장 영역에 있다면, 다음 호출에서 Start가 FALSE가 되어도 위 코드는 DrivePermit을 FALSE로 쓰지 않습니다. ‘IF 조건이 거짓이니 출력도 거짓’이라는 추측은 틀립니다. Temp, Static, 전역, Retain의 수명은 서로 다르며, 호출 간 유지와 전원 재시작 후 보존도 별개의 개념입니다.</p>
-<h2>상승 에지: 눌림 상태와 누른 순간</h2><pre><code>(* PrevStart는 호출 사이에 유지되는 BOOL, 초기 FALSE 가정 *)
-StartPulse := Start AND NOT PrevStart;
-PrevStart := Start;</code></pre><table><tr><th>호출</th><th>Start</th><th>호출 전 PrevStart</th><th>StartPulse</th></tr><tr><td>1</td><td>FALSE</td><td>FALSE</td><td>FALSE</td></tr><tr><td>2</td><td>TRUE</td><td>FALSE</td><td>TRUE</td></tr><tr><td>3</td><td>TRUE</td><td>TRUE</td><td>FALSE</td></tr><tr><td>4</td><td>FALSE</td><td>TRUE</td><td>FALSE</td></tr></table><p>PrevStart를 먼저 대입하면 에지를 놓칩니다. Beckhoff의 <code>R_TRIG</code>는 이런 상승 에지 검출을 제공하는 FB입니다. 인스턴스와 호출 주기를 함께 확인합니다.</p>
-<h2>TON은 기다리느라 코드를 멈추지 않습니다</h2><pre><code>(* TwinCAT Tc2_Standard 읽기용 예시 *)
-(* 선언: QrStable : TON; Stable : BOOL; QrValid : BOOL; *)
-QrStable(IN := QrValid, PT := T#500ms);
-Stable := QrStable.Q;</code></pre><p>TON의 IN이 FALSE이면 Q는 FALSE, ET는 0으로 리셋됩니다. IN이 TRUE로 유지되어 PT에 도달하면 Q가 TRUE가 됩니다. Python의 sleep처럼 실행을 중단하는 함수가 아닙니다. 이 예의 500ms는 교육용 조건입니다. 가상 PLC 실습실에서 TON을 실행할 수 있습니다. 가상 시간을 사용하며 실제 PLC 내부 시간 처리까지 재현하지는 않습니다.</p>
-<h2>현장형 질문</h2><p>버튼을 길게 누를 때 명령이 여러 번 발생한다면, 레벨 조건을 썼는지 에지를 썼는지 확인합니다. 타이머가 예상과 다르면 IN, PT, ET, Q와 호출 조건을 함께 기록하세요.</p>`},
-{id:4,title:'프로그램 구조: OB · FB · FC · DB',desc:'진입점, 함수, 상태 저장소를 구분합니다.',category:'코드 구조',minutes:30,days:'DAY 05',refs:['blocks','elements'],body:`
-<h2>Siemens 프로젝트에서 찾을 네 가지</h2><table><tr><th>이름</th><th>역할</th><th>읽을 때 확인할 점</th></tr><tr><td>OB</td><td>운영체제의 이벤트에 따라 실행되는 Organization Block</td><td>주기 실행인지, 시작 이벤트인지, 인터럽트인지</td></tr><tr><td>FC</td><td>별도 인스턴스 DB가 없는 Function</td><td>입출력과 전역/외부 데이터 사용 여부</td></tr><tr><td>FB</td><td>인스턴스 데이터를 사용하는 Function Block</td><td>호출별 인스턴스, Static 데이터와 상태</td></tr><tr><td>DB</td><td>데이터 저장 블록</td><td>전역 DB인지 FB 인스턴스 DB인지</td></tr></table><p>FC에 인스턴스 DB가 없다는 뜻은 “FC는 외부 상태를 절대 바꾸지 않는다”는 뜻이 아닙니다. 코드가 어떤 데이터를 읽고 쓰는지는 별도로 추적해야 합니다.</p>
-<h2>C++ 객체와 비교하기</h2><p>FB 인스턴스를 상태를 가진 객체와 비교하면 이해하기 쉽습니다. 같은 FB 정의로 도킹 장치 A와 B를 관리할 때 두 인스턴스의 상태가 구분됩니다. 다만 생성·호출·메모리 규칙은 C++와 같지 않습니다. TwinCAT에서는 Program, Function, FB, GVL 등 프로젝트 요소를 해당 환경의 방식으로 읽습니다.</p>
-<h2>설계 연습: 기능을 나눠 보기</h2><pre><code>(* 설계 메모. 실제 제조사 호출 구문이 아님. *)
-입력 매핑 → 카메라 데이터 유효성 판단
-         → 도킹 시퀀스 상태 갱신
-         → 구동 명령 생성
-         → HMI 상태와 알람 데이터 갱신</code></pre><p>가상의 도킹 FB를 만든다면 Input에는 Request, Cancel, QrValid, PositionError를, Output에는 Busy, Done, Error를, 내부 상태에는 State와 타이머 인스턴스를 두는 설계를 연습할 수 있습니다. 이는 이 사이트의 설계 예일 뿐 회사의 표준 인터페이스가 아닙니다.</p>
-<h2>실무 코드 읽기 미션</h2><ol><li>주기 실행 OB에서 호출 관계를 한 단계씩 따라갑니다.</li><li>도킹 FB의 인스턴스 데이터가 어디에 있는지 찾습니다.</li><li>상태 변수를 쓰는 모든 참조를 찾습니다.</li><li>초기화와 재시작 시 데이터 정책을 문서로 확인합니다.</li></ol><p><strong>완료 기준:</strong> “이 값은 어디에 저장되며, 누가 언제 바꾸는가?”에 답할 수 있습니다.</p>`},
+{id:3,title:'Task, Scan Cycle과 상태 유지',desc:'호출 주기·순서와 변수 수명으로 코드를 해석합니다.',category:'PLC 실행',minutes:35,days:'2단계',refs:['program','task','taskOnline','fun','fb','edge','ton'],body:scanBody},
+{id:4,title:'POU 구조: PROGRAM · FB · FUNCTION',desc:'FB 인스턴스의 기억과 함수의 호출 범위를 구분합니다.',category:'코드 구조',minutes:35,days:'2단계',refs:['pou','program','fb','fun','blocks'],body:structureBody},
 {id:5,title:'CASE로 만드는 상태 머신',desc:'대기부터 도킹 완료·고장까지 전이를 설계합니다.',category:'제어 로직',minutes:40,days:'DAY 06',refs:['st','edge'],body:`
 <h2>동작을 상태와 전이로 분리하기</h2><p>아래 상태는 이 사이트에서 정한 교육용 설계입니다. 실제 회사의 시퀀스 이름이나 상태 번호가 아닙니다.</p><table><tr><th>상태</th><th>진입 이후의 역할</th><th>다음 전이</th></tr><tr><td>Idle</td><td>대기, 속도 명령 0</td><td>Enable → Ready</td></tr><tr><td>Ready</td><td>새 Start 에지 대기</td><td>StartPulse → Moving</td></tr><tr><td>Moving</td><td>가상 경로 진행</td><td>경로 끝 → Docking</td></tr><tr><td>Docking</td><td>유효한 QR 조건에서 접근</td><td>도킹 확인 → Done / 시간 초과 → Fault</td></tr><tr><td>Done</td><td>명령 0, 완료 유지</td><td>Reset 및 Start 해제 → Idle</td></tr><tr><td>Fault</td><td>명령 0, 오류 유지</td><td>원인 해제 + Reset 및 Start 해제 → Idle</td></tr></table>
 <h2>IF 두 개와 CASE 하나는 다릅니다</h2><pre><code>CASE State OF
@@ -124,7 +109,7 @@ WithinTolerance :=
 (* 유효성, 연속 유지, 기계적 완료 확인은 별도 설계 항목 *)</code></pre><p>여기서 TolX/Y/Yaw는 교육용 기호이며 실제 허용 오차를 제시하지 않습니다. QR ID가 맞아도 자세 값이 오래되었거나 좌표 부호가 반대라면 제어에 사용할 수 있는지 재검토해야 합니다.</p>
 <h2>시뮬레이터의 명시적 가정</h2><ol><li>가상 시간 한 스캔은 100ms입니다. 실제 PLC 주기가 아닙니다.</li><li>20회 Moving 스캔 뒤 Docking으로 이동합니다. 거리는 모델링하지 않습니다.</li><li>Docking에서 QR Valid/Fresh가 모두 필요합니다.</li><li>DockConfirmed가 연속 3회 TRUE이면 Done입니다. 첫 TRUE 호출을 1회로 셉니다.</li><li>Docking 50회에서 미완료면 Timeout입니다. 경계에서는 Timeout을 우선합니다.</li></ol><p>이는 알고리즘의 물리 성능이 아니라 상태와 고장 처리를 실험하는 모델입니다.</p>
 <h2>통신 핸드셰이크 설계 과제</h2><p>가상의 Request/Busy/Done/Error를 종이에 그려보세요. Request가 유지될 때 중복 동작을 막는 법, Done을 언제 지우는지, 통신 중단 시 어떤 상태가 되는지를 정합니다. 실제 장비의 핸드셰이크 규격을 안다고 가정하지 마세요.</p>`},
-{id:9,title:'알람에서 원인까지 추적하기',desc:'현상·증거·가설을 나누고 재현 조건을 기록합니다.',category:'실무 진단',minutes:35,days:'DAY 11–12',refs:['scan','laser','blocks'],body:`
+{id:9,title:'알람에서 원인까지 추적하기',desc:'현상·증거·가설을 나누고 재현 조건을 기록합니다.',category:'실무 진단',minutes:35,days:'DAY 11–12',refs:['scan','laser','fb'],body:`
 <h2>“안 된다”를 재현 가능한 기록으로</h2><p>이 수업의 절차는 학습을 위한 진단 기록 방법입니다. 실제 작업은 회사의 승인된 점검·안전 절차를 따릅니다. 원인을 찾기 위해 운전 중 신호를 강제하거나 안전 입력을 우회하는 과제는 제공하지 않습니다.</p>
 <table><tr><th>항목</th><th>좋은 기록의 예 · 가상 상황</th></tr><tr><td>발생 조건</td><td>Docking 진입 직후 QrFresh를 FALSE로 변경</td></tr><tr><td>관측</td><td>다음 스캔에 Fault, 명령 0, QR_STALE 기록</td></tr><tr><td>가설</td><td>카메라 데이터 갱신이 멈췄을 수 있음</td></tr><tr><td>필요 증거</td><td>송신 시각/수신 시각, 순번, 연결 상태, 상대 장치 진단</td></tr><tr><td>복귀 조건</td><td>모델에서는 원인 해제 후 Reset, 이어서 새 Start</td></tr></table>
 <h2>코드 추적 순서</h2><ol><li>최초 알람과 뒤따른 알람을 구분합니다.</li><li>알람 직전 상태와 전이 조건을 찾습니다.</li><li>조건을 구성한 입력의 값·유효성·시각을 기록합니다.</li><li>같은 출력 변수를 뒤에서 다시 쓰는 코드가 있는지 찾습니다.</li><li>해결 후 정상 동작뿐 아니라 같은 고장의 재현 시험을 확인합니다.</li></ol>
@@ -135,7 +120,7 @@ WithinTolerance :=
 가설: 아직 확인하지 못한 원인 후보
 다음 확인: 읽기 전용으로 확인할 로그 또는 문서
 결과: 확인된 사실만 기록</code></pre><p>HMI의 알람 문구와 코드의 알람 ID 연결을 확인하세요. 화면에 이상이 없어 보인다는 것과 제어기 내부 조건이 정상이라는 것은 같지 않을 수 있습니다.</p>`},
-{id:10,title:'실무처럼 변경하고 검토하기',desc:'작은 변경, Git 이력, 검증과 인수인계.',category:'업무 적응',minutes:35,days:'DAY 13–14',refs:['git','pages','scl','elements'],body:`
+{id:10,title:'실무처럼 변경하고 검토하기',desc:'작은 변경, Git 이력, 검증과 인수인계.',category:'업무 적응',minutes:35,days:'DAY 13–14',refs:['git','pages','pou','elements'],body:`
 <h2>Git은 변경의 이유를 남기는 도구</h2><p>이 학습 사이트의 코드는 GitHub 저장소에서 관리합니다. 브랜치를 만들고 작은 변경을 커밋한 다음 diff를 읽어 의도와 결과를 확인하세요. PLC 프로젝트의 실제 버전 관리 방식은 파일 형식, IDE 및 회사 절차에 따라 별도 확인해야 합니다. ST 텍스트만 있다고 전체 PLC 프로젝트를 재현할 수 있는 것은 아닙니다.</p>
 <h2>학습 저장소에서만 실행하는 연습</h2><pre><code>git clone https://github.com/jonghyeon9084/mrs-learning-lab.git
 cd mrs-learning-lab
@@ -148,7 +133,7 @@ git status</code></pre><p>의도한 파일만 stage한 뒤 커밋합니다. 실�
 검증: FALSE → TRUE → TRUE에서 펄스가 한 번만 발생한다.
 추가 확인: 원인 해제만으로 자동 재출발하지 않는다.
 한계: 브라우저 모델 검증. 실제 PLC 컴파일·실기 시험 미실시.</code></pre>
-<h2>회사 환경 확인 후 이어갈 단계</h2><ol><li>정확한 CPU/IPC 모델과 개발 도구 버전을 확인합니다.</li><li>승인된 교육 프로젝트, 라이브러리, 장치 구성을 확보합니다.</li><li>실행 진입점, I/O 태그, 상태 머신을 읽기 전용으로 매핑합니다.</li><li>회사에서 정한 교육/시뮬레이션 환경에서 컴파일을 확인합니다.</li><li>실기 시운전은 담당자의 승인된 절차와 검증 기준에 따라 진행합니다.</li></ol>
+<h2>TwinCAT 3 현장 프로젝트에서 이어갈 단계</h2><ol><li>정확한 CPU/IPC 모델과 TwinCAT XAE/XAR 빌드 번호를 확인합니다.</li><li>승인된 교육 프로젝트, 라이브러리, 장치 구성을 확보합니다.</li><li>실행 진입점, I/O 태그, 상태 머신을 읽기 전용으로 매핑합니다.</li><li>회사에서 정한 교육/시뮬레이션 환경에서 컴파일을 확인합니다.</li><li>실기 시운전은 담당자의 승인된 절차와 검증 기준에 따라 진행합니다.</li></ol>
 <h2>기초 과정 학습 완료 기준</h2><p>ST의 IF/CASE를 읽고, 호출 사이의 상태 유지를 설명하고, 센서 값과 유효성을 구분하고, 상태 전이와 알람의 근거를 추적할 수 있어야 합니다. 이 과정 수료는 실제 장비의 설계·안전 검증 역량을 인증하지 않습니다.</p>`}
 ];
 
@@ -178,7 +163,7 @@ export const exercises = [
 
 export const fieldChecks = [
  ['controller','PLC/IPC의 제조사·정확한 모델','장비 라벨과 프로젝트 장치 구성을 대조합니다. 화면 로고만으로 판단하지 않습니다.'],
- ['ide','개발 도구와 버전','TIA Portal / TwinCAT / 기타. 설치된 버전과 프로젝트 요구 버전을 확인합니다.'],
+ ['ide','TwinCAT 3 빌드와 라이브러리','현재 도구는 TwinCAT 3. XAE/XAR 빌드 및 Tc2_Standard/회사 라이브러리 버전을 확인합니다.'],
  ['architecture','제어 분담과 통신 구성','주행·비전·시퀀스·안전 제어의 담당 장치 및 데이터 경로를 확인합니다.'],
  ['lidar','각 LiDAR의 모델과 사용처','안전/측정 역할, 기울어진 스캔 평면, 출력 데이터와 연결을 문서로 확인합니다.'],
  ['camera','QR 데이터 명세','ID만인지 자세 포함인지, 좌표계·단위·품질·갱신 시각을 확인합니다.'],
@@ -186,6 +171,8 @@ export const fieldChecks = [
  ['lamp','램프·광통신 장치 품번','표시등인지 비전 조명인지, 광통신 장치인지 정확한 라벨과 설명서로 확인합니다.'],
  ['hmi','HMI 모델과 연결 대상','Panel PC / Control Panel 여부와 실제 제어 프로그램 실행 장치를 확인합니다.'],
  ['signals','I/O 목록과 알람 정의','정상값, 이상값, 유효성, 수신·송신 주기, 단위와 주소를 확인합니다.'],
+ ['task','Task와 호출 구조','주기·우선순위·PRG 호출 순서·FB 인스턴스와 GVL 쓰기 위치를 확인합니다.'],
+ ['gx','GX Works3 전환 가능성','전환 확정 여부·일정·대상 CPU·적용 범위를 확인합니다.'],
  ['workflow','교육 환경과 작업 절차','승인된 백업·버전 관리·시뮬레이션·시운전 절차를 확인합니다.']
 ];
 
@@ -194,3 +181,25 @@ lessons.forEach(l=>{l.id+=3;l.days='MODULE '+String(l.id).padStart(2,'0');});
 quizzes.forEach(q=>{q.lesson+=3;});
 lessons.unshift(...foundations);
 quizzes.unshift(...foundationQuizzes);
+
+// Preserve original IDs: progress, quiz answers and old deep links remain valid.
+lessons.push(...twinLessons);
+lessons.push(readingLesson,...amrLessons);
+quizzes.push(...twinQuizzes,...amrQuizzes);
+export const curriculum = [
+ {label:'1단계 / TwinCAT 3 ST 기초',caption:'자료형 · 연산자 · IF · FOR · CASE',ids:[3,5]},
+ {label:'2단계 / 회사 코드 읽기',caption:'POU · FB · .Q · 타이머 · Task · GVL · 참조 검색',ids:[7,14,15,6,16,19,20]},
+ {label:'3단계 / 모바일로봇 제어',caption:'현장 구성 · 상태 · 도킹 · HMI · 오류 진단',ids:[4,8,9,10,11,17,21,12,13]},
+ {label:'4단계 / GX Works3 대비',caption:'전환 가능성 · 공통점과 환경 차이',ids:[18]},
+ {label:'선택 복습 / 프로그래밍 기초',caption:'기존 수업과 학습 기록 보존',ids:[1,2]}
+];
+const order=curriculum.flatMap(g=>g.ids);
+lessons.sort((a,b)=>order.indexOf(a.id)-order.indexOf(b.id));
+lessons.forEach(l=>{l.days=curriculum.find(g=>g.ids.includes(l.id)).label;l.reviewed=l.id>=20?'2026.11.12':[1,2,3,8,9,10,11,12,13].includes(l.id)?'2026.11.10 / 환경 정정 11.11':'2026.11.11';});
+export const lessonNumber = id => String(order.indexOf(id)+1).padStart(2,'0');
+export const brands = [
+ {id:'beckhoff',name:'BECKHOFF',environment:'TwinCAT 3 · ST',status:'현재 학습',ids:[3,5,7,14,15,6,16,19,20],description:'현재 확인된 개발 환경. ST 기초에서 POU·FB·멤버 접근·Task·여러 소스의 참조 추적까지 순서대로 읽습니다.'},
+ {id:'mitsubishi',name:'Mitsubishi Electric',environment:'GX Works3 · ST',status:'전환 대비 · 미확정',ids:[18],description:'향후 전환 가능성에 대비한 비교 자료. 일정·CPU·적용 범위는 아직 확인되지 않았습니다.'},
+ {id:'siemens',name:'Siemens',environment:'TIA Portal · SCL',status:'이전 비교 자료',ids:[],description:'현재 주력 환경이라는 근거는 없습니다. 기존 SCL 실습과 작성한 코드를 삭제하지 않고 보관합니다.'},
+ {id:'common',name:'브랜드 공통',environment:'모바일로봇 · 센서 · 도킹',status:'공통 실무',ids:[4,8,9,10,11,17,21,12,13,1,2],description:'센서·상태 머신·도킹·HMI·진단을 학습합니다. 특정 브랜드 채택이나 미확인 제품 역할을 단정하지 않습니다.'}
+];

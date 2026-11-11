@@ -67,7 +67,7 @@ test('all boolean input combinations inhibit output on faults',()=>{
   }
 });
 test('all lessons have valid source references and quizzes',()=>{
-  assert.equal(lessons.length,13);assert.equal(quizzes.length,16);
+  assert.equal(lessons.length,21);assert.equal(quizzes.length,26);
   for(const l of lessons){assert.ok(l.refs.length);assert.ok(l.refs.every(r=>sources[r]));assert.ok(quizzes.some(q=>q.lesson===l.id));}
 });
 test('download templates separate SCL from ST',()=>{

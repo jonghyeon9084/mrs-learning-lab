@@ -1,10 +1,13 @@
 import {motionBodies} from './motion.js';
+import {twinSamples} from './twincat-examples.js';
+import {amrSample} from './amr-case.js';
 // A deliberately bounded interpreter for educational ST/SCL sources.
 // It is NOT a Siemens or Beckhoff compiler/runtime. All time is virtual.
 const copy = value => structuredClone(value);
 const clean = s => s.replace(/\(\*[\s\S]*?\*\)|\/\/[^\n]*/g, m=>m.replace(/[^\n]/g,' '));
-const types = new Set(['BOOL','INT','DINT','REAL','TIME','TON','TON_TIME','IEC_TIMER','R_TRIG']);
-const defaultValue = type => type==='BOOL'?false:['TON','TON_TIME','IEC_TIMER'].includes(type)?{kind:'TON',IN:false,PT:0,Q:false,ET:0,startedAt:null}:type==='R_TRIG'?{kind:'R_TRIG',CLK:false,Q:false,previous:false}:0;
+const timerTypes = ['TON','TOF','TP','TON_TIME','IEC_TIMER'];
+const types = new Set(['BOOL','INT','DINT','REAL','TIME',...timerTypes,'R_TRIG','F_TRIG']);
+const defaultValue = type => type==='BOOL'?false:timerTypes.includes(type)?{kind:['TON_TIME','IEC_TIMER'].includes(type)?'TON':type,IN:false,PT:0,Q:false,ET:0,startedAt:null}:['R_TRIG','F_TRIG'].includes(type)?{kind:type,CLK:false,Q:false,previous:false}:0;
 function timeLiteral(s){const m=/^(?:T|TIME)#(\d+)(MS|S|M|H)$/i.exec(s);if(!m)throw new Error('TIME 리터럴은 T#500ms, T#2s처럼 한 단위로 입력하세요.');return Number(m[1])*({MS:1,S:1000,M:60000,H:3600000}[m[2].toUpperCase()]);}
 function literal(s,type){if(s==null)return defaultValue(type);s=s.trim();if(type==='BOOL'&&/^(TRUE|FALSE)$/i.test(s))return s.toUpperCase()==='TRUE';if(type==='TIME')return timeLiteral(s);if(['INT','DINT','REAL'].includes(type)&&/^[+-]?\d+(?:\.\d+)?$/.test(s)){const n=Number(s);checkType(n,type);return n;}throw new Error(`초기값 '${s}'을 ${type}에 사용할 수 없습니다.`);}
 function checkType(v,type){
@@ -68,7 +71,7 @@ export function compilePLC(source){
     else if(t==='TRUE'||t==='FALSE')a={op:'lit',value:t==='TRUE'};
     else if(/^(T|TIME)#/.test(t))a={op:'lit',value:timeLiteral(t)};
     else if(/^\d/.test(t))a={op:'lit',value:Number(t)};
-    else if(['ABS','MIN','MAX'].includes(t)&&peek()==='('){take();const args=[expr()];while(peek()===','){take();args.push(expr());}expect(')');if((t==='ABS'&&args.length!==1)||(t!=='ABS'&&args.length!==2))fail('ABS는 인자 1개, MIN/MAX는 인자 2개만 지원합니다.');a={op:'fn',kind:t,args};}
+    else if(['ABS','MIN','MAX','ATAN','SQRT'].includes(t)&&peek()==='('){take();const args=[expr()];while(peek()===','){take();args.push(expr());}expect(')');if(args.length!==(['MIN','MAX'].includes(t)?2:1))fail('ABS/ATAN/SQRT는 인자 1개, MIN/MAX는 인자 2개만 지원합니다.');a={op:'fn',kind:t,args};}
     else a=ref(t);
     while(precedence[peek()]!==undefined&&precedence[peek()]>=min){const kind=take();a={op:'binary',kind,a,b:expr(precedence[kind]+1)};}
     depth--;return a;
@@ -120,22 +123,36 @@ export class VirtualPLC{
     function evaluate(n){
       if(n.op==='lit')return n.value;if(n.op==='ref')return read(n);
       if(n.op==='unary'){const a=evaluate(n.a);return n.kind==='NOT'?!bool(a):n.kind==='-'?-num(a):num(a);}
-      if(n.op==='fn'){const args=n.args.map(a=>num(evaluate(a)));return n.kind==='ABS'?Math.abs(args[0]):n.kind==='MIN'?Math.min(...args):Math.max(...args);}
+      if(n.op==='fn'){const args=n.args.map(a=>num(evaluate(a)));if(n.kind==='SQRT'&&args[0]<0)throw new Error('SQRT 입력은 0 이상이어야 합니다.');return ({ABS:Math.abs,MIN:Math.min,MAX:Math.max,ATAN:Math.atan,SQRT:Math.sqrt})[n.kind](...args);}
       const a=evaluate(n.a),b=evaluate(n.b);
       switch(n.kind){case 'AND':return !!(bool(a)&bool(b));case 'OR':return !!(bool(a)|bool(b));case 'XOR':return bool(a)!==bool(b);case '=':case '<>':if(typeof a!==typeof b||typeof a==='object')throw new Error('비교 자료형을 확인하세요.');return n.kind==='='?a===b:a!==b;case '<':return num(a)<num(b);case '>':return num(a)>num(b);case '<=':return num(a)<=num(b);case '>=':return num(a)>=num(b);case '+':return num(a)+num(b);case '-':return num(a)-num(b);case '*':return num(a)*num(b);case '/':if(num(b)===0)throw new Error('0으로 나눌 수 없습니다.');return num(a)/num(b);case 'MOD':if(int(b)===0)throw new Error('0으로 나눌 수 없습니다.');return int(a)%b;}
     }
     function call(n){
-      const r={...n.target,field:null};const fb=read(r);if(!fb||!['TON','R_TRIG'].includes(fb.kind))throw new Error('이 가상 PLC는 TON과 R_TRIG 인스턴스 호출을 지원합니다.');
+      const r={...n.target,field:null};const fb=read(r);if(!fb||!['TON','TOF','TP','R_TRIG','F_TRIG'].includes(fb.kind))throw new Error('지원 FB: TON, TOF, TP, R_TRIG, F_TRIG');
       if(n.target.field&&!(fb.kind==='TON'&&n.target.field==='TON'))throw new Error('지원하지 않는 FB 메서드입니다.');
       if(usedTimers.has(r.name))throw new Error('같은 FB 인스턴스는 한 스캔에서 한 번만 호출하도록 제한했습니다.');usedTimers.add(r.name);
       const args=Object.fromEntries(Object.entries(n.args).map(([k,v])=>[k,evaluate(v)]));
-      const allowed=fb.kind==='TON'?['IN','PT']:['CLK'];if(Object.keys(args).some(k=>!allowed.includes(k)))throw new Error('FB 호출 입력 이름을 확인하세요.');
-      if(fb.kind==='TON'){
-        if(!Object.hasOwn(args,'IN')||!Object.hasOwn(args,'PT'))throw new Error('TON에는 IN, PT가 필요합니다.');const active=bool(args.IN),pt=int(args.PT);if(pt<0)throw new Error('PT는 0 이상이어야 합니다.');
-        if(!active){fb.startedAt=null;fb.ET=0;fb.Q=false;}
-        else{if(!fb.IN||fb.startedAt===null)fb.startedAt=now;fb.ET=Math.min(now-fb.startedAt,pt);fb.Q=fb.ET>=pt;}
+      const isTimer=['TON','TOF','TP'].includes(fb.kind);
+      const allowed=isTimer?['IN','PT']:['CLK'];if(Object.keys(args).some(k=>!allowed.includes(k)))throw new Error('FB 호출 입력 이름을 확인하세요.');
+      if(isTimer){
+        if(!Object.hasOwn(args,'IN')||!Object.hasOwn(args,'PT'))throw new Error('타이머에는 IN, PT가 필요합니다.');const active=bool(args.IN),pt=int(args.PT);checkType(pt,'TIME');
+        // Deterministic call-time model; PT changes during an active interval are excluded.
+        if(fb.startedAt!==null&&pt!==fb.PT)throw new Error('진행 중 PT 변경은 교육 모델에서 지원하지 않습니다. 초기화 후 비교하세요.');
+        if(fb.kind==='TON'){
+          if(!active){fb.startedAt=null;fb.ET=0;fb.Q=false;}
+          else{if(!fb.IN||fb.startedAt===null)fb.startedAt=now;fb.ET=Math.min(now-fb.startedAt,pt);fb.Q=fb.ET>=pt;}
+        }else if(fb.kind==='TOF'){
+          if(active){fb.startedAt=null;fb.ET=0;fb.Q=true;}
+          else{if(fb.IN)fb.startedAt=now;if(fb.startedAt!==null){fb.ET=Math.min(now-fb.startedAt,pt);fb.Q=fb.ET<pt;}else{fb.ET=0;fb.Q=false;}}
+        }else{
+          // A rising edge during an active pulse does not restart it.
+          const wasRunning=fb.Q;
+          if(active&&!fb.IN&&!wasRunning){fb.startedAt=now;fb.Q=pt>0;}
+          if(fb.startedAt!==null){fb.ET=Math.min(now-fb.startedAt,pt);fb.Q=fb.ET<pt;}
+          if(!fb.Q&&!active){fb.startedAt=null;fb.ET=0;}
+        }
         fb.IN=active;fb.PT=pt;
-      }else{if(!Object.hasOwn(args,'CLK'))throw new Error('R_TRIG에는 CLK가 필요합니다.');fb.CLK=bool(args.CLK);fb.Q=fb.CLK&&!fb.previous;fb.previous=fb.CLK;}
+      }else{if(!Object.hasOwn(args,'CLK'))throw new Error('에지 FB에는 CLK가 필요합니다.');fb.CLK=bool(args.CLK);fb.Q=fb.kind==='R_TRIG'?fb.CLK&&!fb.previous:!fb.CLK&&fb.previous;fb.previous=fb.CLK;}
       for(const [k,r] of Object.entries(n.outputs)){if(!['Q','ET'].includes(k)||!Object.hasOwn(fb,k))throw new Error('지원하지 않는 출력 인자');assign(r,fb[k]);}
     }
     function run(nodes){for(const n of nodes){if(--budget<0)throw new Error('한 스캔 연산 제한 초과: 반복문 범위를 확인하세요.');
@@ -163,7 +180,10 @@ export const plcSamples=[
 {id:'docking',title:'06 · 도킹 상태 + 시간 초과',guide:'Start를 켜면 State=1. QrValid를 켜면 State=2. DockConfirmed를 켜면 State=3(완료). State=2에서 완료 없이 가상 2초가 지나면 State=99. Fault를 유지하며, 전체 재시작은 다시 적용으로 수행합니다. 교육용 미니 시퀀스입니다.',inputs:'Start : BOOL;\nQrValid : BOOL;\nDockConfirmed : BOOL;',outputs:'State : INT;\nDrivePermit : BOOL;\nFault : BOOL;',locals:'DockTimer : TON;',body:'DockTimer(IN := State = 2, PT := T#2s);\nCASE State OF\n    0: IF Start THEN State := 1; END_IF;\n    1: IF QrValid THEN State := 2; END_IF;\n    2:\n        IF NOT QrValid OR DockTimer.Q THEN\n            State := 99;\n        ELSIF DockConfirmed THEN\n            State := 3;\n        END_IF;\n    3: (* 완료 유지 *)\n    99: (* Fault 유지 *)\nELSE\n    State := 99;\nEND_CASE;\nDrivePermit := (State = 2) AND QrValid;\nFault := State = 99;'}
 ];
 plcSamples.push(plcSamples.shift());
+plcSamples.push(...twinSamples);
+plcSamples.push(amrSample);
 export function sampleSource(sample,dialect='st'){
+  if(sample.stOnly&&dialect!=='st')throw new Error('이 예제는 TwinCAT 3 ST 학습용입니다.');
   const vars=[sample.inputs,sample.outputs,sample.locals].join('\n').match(/\b\w+(?=\s*:)/g)||[];
   let body=sample.body,locals=sample.locals;
   if(dialect==='scl'){body=body.replace(/\b[A-Za-z_]\w*\b/g,(word,offset,source)=>vars.includes(word)&&source[offset-1]!=='.'?'#'+word:word);locals=locals.replace(/:\s*TON\b/g,': TON_TIME');}
