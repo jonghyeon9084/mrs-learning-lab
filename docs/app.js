@@ -1,6 +1,6 @@
-import {mountPrivateReader} from './private-reader.js?v=20261116-source';
-import {workflowPage} from './workflow.js?v=20261116-source';
-import {mountWorkflow} from './workflow-lab.js?v=20261116-source';
+import {mountPrivateReader} from './private-reader.js?v=20261116-flow';
+import {workflowPage} from './workflow.js?v=20261116-flow';
+import {mountWorkflow} from './workflow-lab.js?v=20261116-flow';
 import {interpretPage,ioPage} from './interpret.js';
 import {ioCSV} from './amr-case.js';
 import {resetRecords} from './records.js';
@@ -79,10 +79,10 @@ function render(){
   unmountVirtual();if(editor){editor.dispose();editor=null;}if(timer){clearInterval(timer);timer=null;}
   const [page,id]=location.hash.slice(1).split('/');route=['home','course','lesson','practice','virtual','robot','review','field','references','interpret','io','simulator','workflow'].includes(page)?page:'home';
   if(route==='practice'&&id==='scl')dialect='scl';
-  const labels={workflow:id==='source'?'원본 소스코드':id==='private'?'실제 소스 학습':'업무 흐름 이해',simulator:'AMR 로봇 시뮬레이터',interpret:'코드 한국어 해석',io:'가상 I/O 테이블',references:'변수 출처 추적',home:'대시보드',course:'개념 & 문법',lesson:'개념 & 문법',practice:'ST 코드 연습장',virtual:'가상 PLC 실습실',robot:'로봇 시뮬레이터',review:'복습 문제',field:'현장 체크리스트'};
+  const labels={workflow:id==='operation'?'Semi-Auto 동작 흐름':id==='source'?'원본 소스코드':id==='private'?'실제 소스 학습':'업무 흐름 이해',simulator:'AMR 로봇 시뮬레이터',interpret:'코드 한국어 해석',io:'가상 I/O 테이블',references:'변수 출처 추적',home:'대시보드',course:'개념 & 문법',lesson:'개념 & 문법',practice:'ST 코드 연습장',virtual:'가상 PLC 실습실',robot:'로봇 시뮬레이터',review:'복습 문제',field:'현장 체크리스트'};
   $('#page-title').textContent=labels[route];document.title=`${labels[route]} · MRS Lab`;
-  document.querySelectorAll('[data-nav]').forEach(a=>{const active=a.dataset.nav===(route==='workflow'&&id==='source'?'source':route==='workflow'&&id==='private'?'private':route==='simulator'?'simulator':route==='lesson'?'course':route);a.classList.toggle('active',active);if(active)a.setAttribute('aria-current','page');else a.removeAttribute('aria-current');});
-  $('#main').innerHTML=({workflow:()=>workflowPage(id),interpret:()=>interpretPage(id,saved.translationDrafts),io:ioPage,references:()=>referencesPage(id),home,course:()=>course(id),practice,virtual:()=>virtualPage(id||'variable'),simulator:simulatorPage,robot:robotView,review,field,lesson:()=>lesson(Number(id))}[route])();updateProgress();if(route==='workflow'){if(id==='source')mountPrivateReader('source');else if(id==='private')mountPrivateReader();else mountWorkflow(id);}if(route==='references')mountReferences();if(route==='practice')mountEditor();if(['virtual','simulator'].includes(route))mountVirtual();if(route==='robot')updateRobot();window.scrollTo(0,0);
+  document.querySelectorAll('[data-nav]').forEach(a=>{const active=a.dataset.nav===(route==='workflow'&&id==='operation'?'operation':route==='workflow'&&id==='source'?'source':route==='workflow'&&id==='private'?'private':route==='simulator'?'simulator':route==='lesson'?'course':route);a.classList.toggle('active',active);if(active)a.setAttribute('aria-current','page');else a.removeAttribute('aria-current');});
+  $('#main').innerHTML=({workflow:()=>workflowPage(id),interpret:()=>interpretPage(id,saved.translationDrafts),io:ioPage,references:()=>referencesPage(id),home,course:()=>course(id),practice,virtual:()=>virtualPage(id||'variable'),simulator:simulatorPage,robot:robotView,review,field,lesson:()=>lesson(Number(id))}[route])();updateProgress();if(route==='workflow'){if(id==='operation')mountPrivateReader('operation');else if(id==='source')mountPrivateReader('source');else if(id==='private')mountPrivateReader();else mountWorkflow(id);}if(route==='references')mountReferences();if(route==='practice')mountEditor();if(['virtual','simulator'].includes(route))mountVirtual();if(route==='robot')updateRobot();window.scrollTo(0,0);
 }
 function download(name,text,mime='text/plain'){const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([text],{type:mime}));a.download=name;document.body.append(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(a.href),1000);}
 function codeFeedback(message,error=false){$('#code-feedback').innerHTML=`<div class="result ${error?'error':''}">${message}</div>`;}

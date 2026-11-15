@@ -1,5 +1,5 @@
-import {workflowLab} from './workflow-lab.js?v=20261116-source';
-import {privateReaderPage} from './private-reader.js?v=20261116-source';
+import {workflowLab} from './workflow-lab.js?v=20261116-flow';
+import {privateReaderPage} from './private-reader.js?v=20261116-flow';
 const esc=s=>String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 export const workflowStages=[
  {id:'button',name:'조작 화면',symbol:'Semi-Auto 버튼 · VISUs',question:'화면에서 누른 버튼은 어떤 요청을 만드는가?',role:'화면 조작과 PLC 쪽 요청 신호가 만나는 지점을 찾습니다. 버튼을 누른 사실과 운전 모드가 실제로 전환된 사실을 분리해서 읽습니다.',look:['VISUs 안의 해당 화면과 버튼 요소','버튼 이벤트·변수 연결·누르는 동안/누른 순간의 동작','연결 변수의 전체 경로와 선언 타입'],unknown:'VISUs 폴더 발견은 문서의 관찰 기록입니다. 실제 버튼 바인딩과 화면이 장비에서 사용되는지는 여기서 검증하지 않았습니다.',read:'“이 버튼은 [이벤트]에서 [변수 전체 경로]에 [값]을 전달한다.” 대괄호는 화면 설정을 확인한 뒤 채웁니다.',ref:'6·8행',next:'버튼의 실제 바인딩 → 그 변수의 선언과 Write/Read 목록',exercise:'VISUs 폴더를 찾았으니 버튼이 Common_Semi_Auto_Mode_SW에 연결됐다고 확정할 수 있을까요?',answer:'아니요. 폴더의 존재와 개별 요소의 바인딩은 다른 증거입니다. 실제 화면 요소와 변수 연결을 확인해야 합니다.'},
@@ -11,6 +11,7 @@ export const workflowStages=[
  {id:'drive',name:'출력·피드백',symbol:'Drive 출력 · 실제 장치',question:'최종 명령이 장치에 전달됐고 결과가 돌아왔는가?',role:'작업 요청, 최종 출력, 통신·I/O 매핑, 장치 피드백을 이어 확인합니다. 이 페이지에서 실제 장비를 조작하거나 값을 강제하지 않습니다.',look:['Drive 출력의 최종 Writer와 중간 덮어쓰기','I/O/통신 매핑, 드라이브 인터페이스, 단위','실제 속도·위치·상태·고장 피드백의 Read 경로'],unknown:'Drive의 정확한 심볼, 드라이브 종류, 주소, 안전 제어와 일반 제어의 분담은 미확인입니다.',read:'“PLC는 [명령]을 출력한다. [피드백]으로 실제 반응을 확인한다.” 일반 구동 허가나 명령 0만으로 인증된 안전 정지를 증명하지 않습니다.',ref:'6행',next:'피드백 → 작업 완료/오류 판정으로 되돌아가는 경로',exercise:'Drive 출력값이 정상인데 로봇이 정지해 있다면 PLC 로직 정상으로 판단해도 되나요?',answer:'출력 생성까지 확인한 것입니다. 매핑·전달·장치 상태·피드백을 나눠 확인해야 하며, 증거 없이 모터 고장 등으로 결론내리지 않습니다.'}
 ];
 export function workflowPage(id){
+ if(id==='operation')return '<h1>Semi-Auto 동작 흐름</h1><section class="panel lesson-body">'+privateReaderPage('operation')+'</section>';
  if(id==='source')return '<div class="eyebrow">SOURCE FILES / 제공된 원문</div><h1>원본 소스코드</h1><section class="panel lesson-body">'+privateReaderPage('source')+'</section>';
  if(id==='private')return '<div class="eyebrow">SOURCE LIBRARY / 원문과 해설을 함께 읽기</div><h1>실제 소스 학습</h1><section class="panel lesson-body">'+privateReaderPage()+'</section>';
  const stage=workflowStages.find(s=>s.id===id)||workflowStages[0];
