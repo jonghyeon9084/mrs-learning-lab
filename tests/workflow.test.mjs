@@ -20,7 +20,7 @@ test('blocked edge is not queued, faults latch, and accepted job survives change
 });
 test('walkthrough code locations exist and published source files match the displayed source',()=>{
  for(const scenario of flowScenarios)for(const scan of runFlowScenario(scenario.id))for(const event of scan.events){assert.ok(event.line>0);assert.ok(event.endLine>=event.line);assert.ok(event.endLine<=flowSources[event.file].code.split('\n').length);}
- for(const [key,name] of Object.entries({gvl:'GVLs/GVL_Cell.st',main:'POUs/PRG_Learn.st',job:'POUs/FB_Job.st',drive:'POUs/FB_Drive.st'}))assert.equal(readFileSync(new URL('../docs/examples/workflow/'+name,import.meta.url),'utf8').trim(),flowSources[key].code.trim());
- for(const code of flowSources.types.code.split('\n\n')){const name=/TYPE (\w+)/.exec(code)[1];assert.equal(readFileSync(new URL('../docs/examples/workflow/DUTs/'+name+'.st',import.meta.url),'utf8').trim(),code.trim());}
+ for(const [key,name] of Object.entries({gvl:'GVLs/GVL_Cell.st',main:'POUs/PRG_Learn.st',job:'POUs/FB_Job.st',drive:'POUs/FB_Drive.st'}))assert.equal(readFileSync(new URL('../docs/examples/workflow/'+name,import.meta.url),'utf8').replaceAll('\r\n','\n').trim(),flowSources[key].code.trim());
+ for(const code of flowSources.types.code.split('\n\n')){const name=/TYPE (\w+)/.exec(code)[1];assert.equal(readFileSync(new URL('../docs/examples/workflow/DUTs/'+name+'.st',import.meta.url),'utf8').replaceAll('\r\n','\n').trim(),code.trim());}
  const html=workflowPage('main');assert.match(html,/전체 구조·모든 소스/);assert.match(html,/xxx.xxx.xxx 풀기/);assert.match(html,/회사 코드에 적용할 추적 지도/);
 });
