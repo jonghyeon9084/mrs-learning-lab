@@ -1,7 +1,7 @@
-// Source library stays in this browser's IndexedDB, never in network requests.
+// User-authorized fixed public study source, cached per browser; learning drafts stay separate.
 import {readPrivateStudy,writePrivateStudy,writePrivatePosition,removePrivateStudy,restorePrivatePosition} from './private-store.js';
-import {mountOperationFlow,validateOperationFlow} from './operation-flow.js?v=20261116-flow';
-import {mountSourceBrowser} from './source-browser.js?v=20261116-flow';
+import {mountOperationFlow,validateOperationFlow} from './operation-flow.js?v=20261116-live';
+import {mountSourceBrowser} from './source-browser.js?v=20261116-live';
 const esc=s=>String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 let bundle=null,chapter=0,selected=null,revision=0;
 export function validatePrivateBundle(data){
@@ -19,7 +19,7 @@ export function findPrivateText(data,term){
  for(const f of data.files.filter(f=>f.searchable===true)){for(const [i,line] of f.content.split('\n').entries()){if(line.toLowerCase().includes(needle)){results.push({file:f.path,line:i+1,text:line});if(results.length>=80)return results;}}}
  return results;
 }
-export function privateReaderPage(mode='lesson'){return `<div id="private-reader"><h3>${mode==='operation'?'Semi-Auto 동작 흐름':mode==='source'?'원본 소스 전체 보기':'실제 소스 따라가기'}</h3><nav class="source-view-tabs" aria-label="실제 소스 보기 방식"><a class="btn secondary small" href="#workflow/operation" ${mode==='operation'?'aria-current="page"':''}>Semi-Auto 동작 흐름</a><a class="btn secondary small" href="#workflow/source" ${mode==='source'?'aria-current="page"':''}>원본 소스 전체</a><a class="btn secondary small" href="#workflow/private" ${mode==='lesson'?'aria-current="page"':''}>구조도 · 한글 해설</a></nav><p>구조도에서 담당 코드를 찾고, 조건과 변수의 전달을 원문·한글 해설과 함께 따라갑니다. 저장한 자료와 마지막으로 읽던 위치가 자동으로 열립니다.</p><p data-private-message role="status">이 브라우저에 저장된 자료를 확인하고 있습니다…</p><div data-private-content></div><details class="workflow-question" data-private-settings><summary>자료 관리 · 최초 등록 / 교체</summary><p>처음 한 번 등록하면 이 브라우저에 보관합니다. 이후에는 파일을 고르지 않고 바로 공부할 수 있습니다. 회사 원문은 공개 사이트나 서버로 전송하지 않습니다.</p><label class="private-upload">학습자료 등록·교체 <input type="file" accept=".json,application/json" data-private-file></label><p class="muted">이 브라우저·프로필에 저장됩니다. 다른 브라우저나 기기로 자동 동기화되지는 않으며, 사이트 데이터 삭제·비공개 모드·저장 공간 정리 시 자료가 사라질 수 있습니다. 기존 수업 진도·작성 코드·PC 원본과는 별도입니다.</p><button class="btn secondary small" data-private-remove>이 브라우저의 소스 자료 삭제</button></details></div>`;}
+export function privateReaderPage(mode='lesson'){return `<div id="private-reader"><h3>${mode==='operation'?'Semi-Auto 동작 흐름':mode==='source'?'원본 소스 전체 보기':'실제 소스 따라가기'}</h3><nav class="source-view-tabs" aria-label="실제 소스 보기 방식"><a class="btn secondary small" href="#workflow/operation" ${mode==='operation'?'aria-current="page"':''}>Semi-Auto 동작 흐름</a><a class="btn secondary small" href="#workflow/source" ${mode==='source'?'aria-current="page"':''}>원본 소스 전체</a><a class="btn secondary small" href="#workflow/private" ${mode==='lesson'?'aria-current="page"':''}>구조도 · 한글 해설</a></nav><p>구조도에서 담당 코드를 찾고, 조건과 변수의 전달을 원문·한글 해설과 함께 따라갑니다. 저장한 자료와 마지막으로 읽던 위치가 자동으로 열립니다.</p><p data-private-message role="status">이 브라우저에 저장된 자료를 확인하고 있습니다…</p><div data-private-content></div><details class="workflow-question" data-private-settings><summary>고정 학습자료 안내</summary><p>Semi-Auto는 제공된 소스와 웨이포인트를 사용하는 고정 실습입니다. 매번 파일이나 JSON을 선택하지 않습니다. 공개 사이트에 회사 식별 표기를 가린 소스 사본과 해설이 포함되어 자동으로 열립니다. 원문 줄 번호는 유지했습니다. 학습 진도·작성 코드는 브라우저별로 유지합니다.</p></details></div>`;}
 const refButton=(r,i)=>`<button class="wf-source-link" data-private-ref="${i}">${esc(r.label)} · ${esc(r.file.split('/').pop())}:${r.line}–${r.end} ↗</button>`;
 function fileTree(){const groups=new Map();bundle.files.forEach((f,i)=>{const group=f.path.slice(0,f.path.lastIndexOf('/'))||'파일';if(!groups.has(group))groups.set(group,[]);groups.get(group).push([f,i]);});return `<details class="workflow-question"><summary>패키지 파일 트리 · ${bundle.files.length}개 텍스트</summary>${[...groups].map(([group,items])=>`<details><summary>${esc(group)} · ${items.length}</summary><div class="workflow-links">${items.map(([f,i])=>`<button class="wf-source-link" data-private-tree="${i}">${esc(f.path.split('/').pop())}</button>`).join('')}</div></details>`).join('')}</details>`;}
 function sourceHTML(){
@@ -34,7 +34,7 @@ export function mountPrivateReader(mode='lesson'){
  const remember=()=>{if(bundle)writePrivatePosition({chapter,selected}).catch(()=>{if(root.isConnected)message.textContent='읽던 위치를 저장하지 못했습니다. 자료는 현재 화면에서 계속 볼 수 있습니다.';});};
  const source=()=>{root.querySelector('[data-private-source]').innerHTML=sourceHTML();const box=root.querySelector('.private-code'),mark=box?.querySelector('.wf-mark');if(mark)box.scrollTop=mark.offsetTop-box.offsetTop-20;remember();};
  const render=()=>{
-  if(!bundle){content.innerHTML='<div class="callout">이 브라우저에는 아직 실제 소스 학습자료가 등록되어 있지 않습니다. 아래 자료 관리에서 처음 한 번 등록하면 다음부터 자동으로 열립니다.</div>';return;}
+  if(!bundle){content.innerHTML='<div class="callout">이 브라우저에는 아직 고정 학습자료가 준비되지 않았습니다. 기존 자료가 저장된 브라우저에서는 자동으로 열립니다.</div>';return;}
   if(mode==='operation'){content.innerHTML='<div data-private-operation></div>';mountOperationFlow(content.firstElementChild,bundle,ref=>{selected=ref;remember();location.hash='workflow/source';});return;}
   if(mode==='source'){content.innerHTML='<div data-private-full-source></div>';mountSourceBrowser(content.firstElementChild,bundle,selected,position=>{selected=position;remember();});return;}
   const c=bundle.chapters[chapter];
@@ -69,6 +69,17 @@ export function mountPrivateReader(mode='lesson'){
   if(e.target.hasAttribute('data-private-search')){e.preventDefault();const term=new FormData(e.target).get('term');results=findPrivateText(bundle,String(term));root.querySelector('[data-private-results]').innerHTML=results.length?results.map((r,i)=>`<div><button class="wf-source-link" data-private-result="${i}">${esc(r.file.split('/').pop())}:${r.line}</button><pre>${esc(r.text)}</pre></div>`).join(''):'<p>텍스트 일치 없음. 다른 별칭·구조체 전체 쓰기·외부 바인딩까지 없다는 뜻은 아닙니다.</p>';}
   else if(e.target.hasAttribute('data-private-jump')){e.preventDefault();const n=Number(new FormData(e.target).get('line'));selected={...selected,line:n,end:n};source();}
  });
- if(bundle){render();message.textContent='저장된 실제 소스와 읽던 위치를 열었습니다.';}
- else{const attempt=revision;readPrivateStudy().then(saved=>{if(!root.isConnected||revision!==attempt)return;if(saved.bundle){bundle=validatePrivateBundle(saved.bundle);const position=restorePrivatePosition(bundle,saved.position);chapter=position.chapter;selected=position.selected;render();message.textContent='저장된 실제 소스와 읽던 위치를 열었습니다.';}else{render();message.textContent='최초 등록 후에는 자동으로 열립니다.';root.querySelector('[data-private-settings]').open=true;}}).catch(error=>{if(root.isConnected){message.textContent='저장된 자료를 열지 못했습니다. '+error.message;root.querySelector('[data-private-settings]').open=true;}});}
+ if(bundle){render();message.textContent='고정 소스와 실행 모델을 열었습니다.';}
+ else{const attempt=revision;(async()=>{
+  let saved={};try{saved=await readPrivateStudy();}catch{}
+  let next=saved.bundle;
+  if(next?.fixedVersion!=='20261116-live-anon'){
+   try{const response=await fetch('./semi-auto-study.json?v=20261116-live');if(!response.ok)throw new Error('자료 요청 실패');next=validatePrivateBundle(await response.json());}
+   catch(error){if(!next?.semiSimulation)throw error;}
+  }
+  if(!root.isConnected||revision!==attempt)return;
+  bundle=validatePrivateBundle(next);const position=restorePrivatePosition(bundle,saved.position);chapter=position.chapter;selected=position.selected;
+  render();message.textContent='고정 자료 자동 로드 · 회사 식별 표기를 가린 공개용 사본 · 원문 줄 번호 유지';
+  try{await writePrivateStudy(bundle,position);}catch{message.textContent='고정 자료를 열었습니다. 이 브라우저에서는 읽던 위치 저장을 사용할 수 없습니다.';}
+ })().catch(error=>{if(root.isConnected){message.textContent='고정 자료를 열지 못했습니다. 연결을 확인한 뒤 새로고침해 주세요. '+error.message;}});}
 }

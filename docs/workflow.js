@@ -1,5 +1,5 @@
-import {workflowLab} from './workflow-lab.js?v=20261116-flow';
-import {privateReaderPage} from './private-reader.js?v=20261116-flow';
+import {workflowLab} from './workflow-lab.js?v=20261116-live';
+import {privateReaderPage} from './private-reader.js?v=20261116-live';
 const esc=s=>String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 export const workflowStages=[
  {id:'button',name:'조작 화면',symbol:'Semi-Auto 버튼 · VISUs',question:'화면에서 누른 버튼은 어떤 요청을 만드는가?',role:'화면 조작과 PLC 쪽 요청 신호가 만나는 지점을 찾습니다. 버튼을 누른 사실과 운전 모드가 실제로 전환된 사실을 분리해서 읽습니다.',look:['VISUs 안의 해당 화면과 버튼 요소','버튼 이벤트·변수 연결·누르는 동안/누른 순간의 동작','연결 변수의 전체 경로와 선언 타입'],unknown:'VISUs 폴더 발견은 문서의 관찰 기록입니다. 실제 버튼 바인딩과 화면이 장비에서 사용되는지는 여기서 검증하지 않았습니다.',read:'“이 버튼은 [이벤트]에서 [변수 전체 경로]에 [값]을 전달한다.” 대괄호는 화면 설정을 확인한 뒤 채웁니다.',ref:'6·8행',next:'버튼의 실제 바인딩 → 그 변수의 선언과 Write/Read 목록',exercise:'VISUs 폴더를 찾았으니 버튼이 Common_Semi_Auto_Mode_SW에 연결됐다고 확정할 수 있을까요?',answer:'아니요. 폴더의 존재와 개별 요소의 바인딩은 다른 증거입니다. 실제 화면 요소와 변수 연결을 확인해야 합니다.'},
