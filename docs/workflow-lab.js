@@ -1,5 +1,5 @@
 import {flowSources,flowScenarios,runFlowScenario,showValue,sourceSpan} from './workflow-case.js';
-import {privateReaderPage,mountPrivateReader} from './private-reader.js';
+import {privateReaderPage,mountPrivateReader} from './private-reader.js?v=20261116-library';
 const esc=s=>String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const table=(heads,rows)=>`<div class="table-scroll"><table><thead><tr>${heads.map(h=>`<th>${h}</th>`).join('')}</tr></thead><tbody>${rows.map(r=>`<tr>${r.map(c=>`<td>${c}</td>`).join('')}</tr>`).join('')}</tbody></table></div>`;
 const link=(file,text,line=1)=>`<button class="wf-source-link" data-wf-source="${file}" data-wf-line="${line}">${text} ↗</button>`;

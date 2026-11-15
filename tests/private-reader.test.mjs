@@ -1,6 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {validatePrivateBundle,findPrivateText} from '../docs/private-reader.js';
+import {restorePrivatePosition} from '../docs/private-store.js';
 const sample=()=>({format:'mrs-private-study-v1',title:'내 연습',files:[{path:'source.st',content:'VAR flag : BOOL; END_VAR\nflag := TRUE;\n// flag is a comment',searchable:true},{path:'copy.st',content:'flag := TRUE;',searchable:false}],chapters:[{title:'시작',paragraphs:['조건과 쓰기'],refs:[{file:'source.st',line:1,end:2,label:'원문'}],question:'누가 쓰나?',answer:'2행'}]});
 test('private bundle validates real source bounds before accepting a report',()=>{
  assert.equal(validatePrivateBundle(sample()).chapters.length,1);
@@ -11,4 +12,11 @@ test('private bundle validates real source bounds before accepting a report',()=
 });
 test('search remains literal, includes comments, and avoids duplicate nonsearchable copies',()=>{
  const data=validatePrivateBundle(sample());assert.deepEqual(findPrivateText(data,'FLAG').map(r=>r.line),[1,2,3]);assert.deepEqual(findPrivateText(data,'flag := TRUE;').map(r=>r.line),[2]);assert.equal(findPrivateText(data,'[').length,0);assert.equal(findPrivateText(data,'f').length,0);
+});
+test('saved reading position restores valid locations and falls back for replaced source files',()=>{
+ const data=sample(),position={chapter:0,selected:{file:'source.st',line:2,end:2}};
+ assert.deepEqual(restorePrivatePosition(data,position),position);
+ for(const bad of [null,{chapter:99,selected:{file:'missing',line:1,end:1}},{chapter:-1,selected:{file:'source.st',line:500,end:500}}]){
+  const restored=restorePrivatePosition(data,bad);assert.equal(restored.chapter,0);assert.equal(restored.selected.file,'source.st');assert.equal(restored.selected.line,1);
+ }
 });
